@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Auro AI Chess Master</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#0d1117;--card:#161b22;--line:#2a313c;--tx:#e6edf3;--mut:#8b949e;--gold:#d4a84b;--lt:#e9d8b4;--dk:#a9763f;--ok:#3fb950;--bad:#f85149}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:#0d1117;color:var(--tx);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:19px;margin:0;color:var(--gold);letter-spacing:.5px}nav{display:flex;gap:6px;margin-left:auto}
+button,select{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--gold)}button.on,button.pri{background:var(--gold);color:#111;border-color:var(--gold);font-weight:600}
+main{max-width:980px;margin:0 auto;padding:16px}.wrap{display:flex;gap:18px;flex-wrap:wrap;justify-content:center}
+#board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));touch-action:manipulation;-webkit-tap-highlight-color:transparent;width:min(92vw,520px);aspect-ratio:1;border:3px solid #3a2f1c;border-radius:6px;overflow:hidden}
+.sq{line-height:1;overflow:hidden;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;font-size:min(9vw,56px);position:relative;cursor:pointer;user-select:none}
+.sq.l{background:var(--lt)}.sq.d{background:var(--dk)}.sq.last{box-shadow:inset 0 0 0 100px rgba(212,168,75,.35)}
+.sq.sel{box-shadow:inset 0 0 0 100px rgba(63,185,80,.45)}.sq.chk{box-shadow:inset 0 0 0 100px rgba(248,81,73,.6)}
+.sq.t::after{content:"";width:28%;height:28%;border-radius:50%;background:rgba(0,0,0,.28);position:absolute}
+.sq.tc::after{width:86%;height:86%;background:none;border:4px solid rgba(0,0,0,.3)}
+.w{color:#fff;text-shadow:0 0 2px #000,0 0 2px #000,0 1px 3px #000}.b{color:#1a1a1a;text-shadow:0 0 1px #fff}
+.side{flex:1;min-width:260px;max-width:420px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+#status{font-weight:600;color:var(--gold)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#moves{max-height:200px;overflow:auto;font-family:ui-monospace,monospace;font-size:13px;color:var(--mut)}#moves b{color:var(--tx)}
+.hide{display:none}.mut{color:var(--mut)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.big{font-size:28px;font-weight:700;color:var(--gold)}table{width:100%;border-collapse:collapse}td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}
+.tag{padding:2px 8px;border-radius:99px;font-size:12px;border:1px solid var(--line)}.W{color:var(--ok)}.L{color:var(--bad)}.D{color:var(--mut)}
+.overflow{overflow-x:auto}svg text{fill:#8b949e;font-size:10px}
+.pb{display:flex;justify-content:space-between;align-items:center;padding:6px 2px;font-weight:600}.clk{font-family:ui-monospace,monospace;font-size:20px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:2px 12px;min-width:84px;text-align:center}.clk.act{border-color:var(--gold);color:var(--gold)}.clk.low{color:var(--bad);border-color:var(--bad)}input{background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font:inherit}
+</style></head><body>
+<header><h1>♞ Auro AI Chess Master</h1>
+<nav><button id="tPlay" class="on">Play</button><button id="tHist">History</button><button id="tAna">Analysis</button></nav></header>
+<main>
+<section id="pPlay"><div class="wrap"><div style="width:min(92vw,520px)"><div class="pb" id="bTop"></div><div id="board"></div><div class="pb" id="bBot"></div></div>
+<div class="side">
+<div class="card"><div id="status">Enter your name, then press New game</div></div>
+<div class="card row"><input id="pname" placeholder="Enter your name" maxlength="20" style="flex:1 1 100%;font-size:16px"><select id="tc"><option value="0,0">No clock</option><option value="180,2">3 min + 2s</option><option value="300,3">5 min + 3s</option><option value="600,0" selected>10 min</option><option value="900,10">15 min + 10s</option></select><select id="col"><option value="w">Play White</option><option value="b">Play Black</option><option value="r">Random</option></select>
+<select id="lvl"><option value="0">Easy</option><option value="1">Medium</option><option value="2" selected>Hard</option></select>
+<button class="pri" id="bNew">New game</button></div>
+<div class="card row"><button id="bUndo">Undo</button><button id="bFlip">Flip</button><button id="bRes">Resign</button></div>
+<div class="card"><div class="mut" style="margin-bottom:6px">Moves</div><div id="moves"></div></div>
+</div></div></section>
+<section id="pHist" class="hide"></section>
+<section id="pAna" class="hide"></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const V={P:100,N:320,B:330,R:500,Q:900,K:0},FL='abcdefgh',nm=i=>FL[i&7]+(8-(i>>3));
+const GL={K:'♚',Q:'♛',R:'♜',B:'♝',N:'♞',P:'♟'};
+const ND=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]],DR=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+const ok=(r,c)=>r>=0&&r<8&&c>=0&&c<8;
+function init(){const b=Array(64).fill(null),k='RNBQKBNR';for(let c=0;c<8;c++){b[c]='b'+k[c];b[8+c]='bP';b[48+c]='wP';b[56+c]='w'+k[c]}return{b,t:'w',c:'KQkq',ep:-1,hm:0}}
+function att(b,s,by){const r=s>>3,c=s&7,d=by=='w'?1:-1;
+ for(const dc of[-1,1])if(ok(r+d,c+dc)&&b[(r+d)*8+c+dc]==by+'P')return 1;
+ for(const[x,y]of ND)if(ok(r+x,c+y)&&b[(r+x)*8+c+y]==by+'N')return 1;
+ for(let k=0;k<8;k++){const[x,y]=DR[k];let rr=r+x,cc=c+y,f=1;
+  while(ok(rr,cc)){const p=b[rr*8+cc];if(p){if(p[0]==by){const t=p[1];if(t=='Q'||(k<4?t=='R':t=='B')||(f&&t=='K'))return 1}break}rr+=x;cc+=y;f=0}}
+ return 0}
+function gen(s){const{b,t}=s,o=t=='w'?'b':'w',out=[],add=(f,to,x)=>out.push(Object.assign({f,t:to,p:null},x));
+ for(let i=0;i<64;i++){const p=b[i];if(!p||p[0]!=t)continue;const ty=p[1],r=i>>3,c=i&7;
+  if(ty=='P'){const d=t=='w'?-1:1,st=t=='w'?6:1,last=t=='w'?0:7,r1=r+d;
+   const ad=(to,x)=>{if(r1==last)for(const q of'QRBN')add(i,to,{p:q});else add(i,to,x)};
+   if(!b[r1*8+c]){ad(r1*8+c);if(r==st&&!b[(r+2*d)*8+c])add(i,(r+2*d)*8+c)}
+   for(const dc of[-1,1]){if(!ok(r1,c+dc))continue;const to=r1*8+c+dc,g=b[to];if(g&&g[0]==o)ad(to);else if(to==s.ep)add(i,to,{e:1})}}
+  else if(ty=='N'||ty=='K'){for(const[x,y]of(ty=='N'?ND:DR))if(ok(r+x,c+y)){const g=b[(r+x)*8+c+y];if(!g||g[0]==o)add(i,(r+x)*8+c+y)}
+   if(ty=='K'){const w=t=='w',e=w?60:4;if(i==e&&!att(b,e,o)){
+    if(s.c.includes(w?'K':'k')&&!b[e+1]&&!b[e+2]&&b[e+3]==t+'R'&&!att(b,e+1,o)&&!att(b,e+2,o))add(e,e+2,{k:1});
+    if(s.c.includes(w?'Q':'q')&&!b[e-1]&&!b[e-2]&&!b[e-3]&&b[e-4]==t+'R'&&!att(b,e-1,o)&&!att(b,e-2,o))add(e,e-2,{k:1})}}}
+  else{for(let k=ty=='B'?4:0;k<(ty=='R'?4:8);k++){const[x,y]=DR[k];let rr=r+x,cc=c+y;
+   while(ok(rr,cc)){const g=b[rr*8+cc];if(g){if(g[0]==o)add(i,rr*8+cc);break}add(i,rr*8+cc);rr+=x;cc+=y}}}}
+ return out}
+function make(s,m){const b=s.b.slice(),p=b[m.f],t=s.t;let c=s.c,ep=-1;const cap=b[m.t];
+ b[m.t]=m.p?t+m.p:p;b[m.f]=null;if(m.e)b[m.t+(t=='w'?8:-8)]=null;
+ if(m.k){if(m.t>m.f){b[m.f+1]=b[m.f+3];b[m.f+3]=null}else{b[m.f-1]=b[m.f-4];b[m.f-4]=null}}
+ if(p[1]=='P'&&Math.abs(m.t-m.f)==16)ep=(m.f+m.t)/2;
+ const rm=x=>{c=c.replace(x,'')};if(p[1]=='K'){if(t=='w'){rm('K');rm('Q')}else{rm('k');rm('q')}}
+ for(const q of[m.f,m.t]){if(q==63)rm('K');if(q==56)rm('Q');if(q==7)rm('k');if(q==0)rm('q')}
+ return{b,t:t=='w'?'b':'w',c,ep,hm:(p[1]=='P'||cap||m.e)?0:s.hm+1}}
+const inChk=s=>att(s.b,s.b.indexOf(s.t+'K'),s.t=='w'?'b':'w');
+const legal=s=>gen(s).filter(m=>{const n=make(s,m);return!att(n.b,n.b.indexOf(s.t+'K'),n.t)});
+function ev(s){let v=0;for(let i=0;i<64;i++){const p=s.b[i];if(!p)continue;const w=p[0]=='w',ty=p[1],r=w?i>>3:7-(i>>3),c=i&7;
+ const cen=7-Math.abs(c-3.5)-Math.abs((i>>3)-3.5);let x=V[ty];
+ if(ty=='P')x+=(6-r)*8+((c==3||c==4)?(6-r)*5:0);else if(ty=='N')x+=cen*7;else if(ty=='B')x+=cen*4+(r==7?-10:0);
+ else if(ty=='R')x+=r==1?14:0;else if(ty=='Q')x+=cen;else x+=(r==7?8:-25)+(r==7&&(c<3||c>5)?18:0);
+ v+=w?x:-x}return v}
+const order=(ms,s)=>{const sc=m=>(s.b[m.t]?10*V[s.b[m.t][1]]-V[s.b[m.f][1]]/10:0)+(m.e?900:0)+(m.p?(m.p=='Q'?800:0):0);return ms.map(m=>[sc(m),m]).sort((a,b)=>b[0]-a[0]).map(x=>x[1])};
+let DL=0,ABORT=0,NC=0;
+function srch(s,d,a,b,pl){if(DL&&(++NC&511)==0&&Date.now()>DL)ABORT=1;if(ABORT)return 0;if(s.hm>=100)return 0;const q=d<=0;let bs=-1e9,ms=gen(s);
+ if(q){const st=(s.t=='w'?1:-1)*ev(s);if(d<-4||st>=b)return st;bs=st;if(st>a)a=st;ms=ms.filter(m=>s.b[m.t]||m.e||m.p)}
+ ms=order(ms,s);let n=0;
+ for(const m of ms){const c=make(s,m);if(att(c.b,c.b.indexOf(s.t+'K'),c.t))continue;n++;
+  const v=-srch(c,d-1,-b,-a,pl+1);if(v>bs)bs=v;if(v>a)a=v;if(a>=b)break}
+ if(!n&&!q)return inChk(s)?-30000+pl:0;return bs}
+function best(s,d,nz){let bm=null;const ms0=order(legal(s),s);
+ for(let dd=1;dd<=d;dd++){DL=(nz||dd==1)?0:Date.now()+2500;ABORT=0;let cur=null,ba=-1e9;
+  for(const m of ms0){const lo=nz?-1e9:ba;const v=-srch(make(s,m),dd-1,-1e9,-lo,1)+nz*(Math.random()-.5)*2;if(ABORT)break;if(v>ba||!cur){ba=v;cur=m}}
+  if(ABORT)break;bm=cur;ms0.splice(ms0.indexOf(cur),1);ms0.unshift(cur)}
+ DL=0;ABORT=0;return bm}
+const uci=m=>nm(m.f)+nm(m.t)+(m.p?m.p.toLowerCase():'');
+function san(s,m,ms){const p=s.b[m.f],ty=p[1];let o;
+ if(m.k)o=m.t>m.f?'O-O':'O-O-O';else{const cap=s.b[m.t]||m.e;
+  if(ty=='P')o=(cap?FL[m.f&7]+'x':'')+nm(m.t)+(m.p?'='+m.p:'');
+  else{o=ty;const am=ms.filter(x=>x!==m&&x.t==m.t&&s.b[x.f]==p);
+   if(am.length){if(!am.some(x=>(x.f&7)==(m.f&7)))o+=FL[m.f&7];else if(!am.some(x=>(x.f>>3)==(m.f>>3)))o+=8-(m.f>>3);else o+=nm(m.f)}
+   o+=(cap?'x':'')+nm(m.t)}}
+ const n=make(s,m);if(inChk(n))o+=legal(n).length?'+':'#';return o}
+/* Opening repertoire (engine-internal) */
+const E='e2e4',D='d2d4',BK={'':[E,D,'g1f3','c2c4'],[E]:['c7c5','e7e5'],[D]:['g8f6','d7d5'],'g1f3':['d7d5','g8f6'],'c2c4':['e7e5','g8f6'],
+[E+' e7e5']:['g1f3'],[E+' e7e5 g1f3']:['b8c6'],[E+' e7e5 g1f3 b8c6']:['f1b5','f1c4'],[E+' e7e5 g1f3 b8c6 f1b5']:['a7a6','g8f6'],
+[E+' e7e5 g1f3 b8c6 f1b5 a7a6']:['b5a4'],[E+' e7e5 g1f3 b8c6 f1b5 a7a6 b5a4']:['g8f6'],[E+' e7e5 g1f3 b8c6 f1b5 a7a6 b5a4 g8f6']:['e1g1'],
+[E+' c7c5']:['g1f3'],[E+' c7c5 g1f3']:['d7d6','b8c6'],[E+' c7c5 g1f3 d7d6']:[D],[E+' c7c5 g1f3 d7d6 d2d4']:['c5d4'],
+[E+' c7c5 g1f3 d7d6 d2d4 c5d4']:['f3d4'],[E+' c7c5 g1f3 d7d6 d2d4 c5d4 f3d4']:['g8f6'],[E+' c7c5 g1f3 d7d6 d2d4 c5d4 f3d4 g8f6']:['b1c3'],
+[E+' c7c5 g1f3 d7d6 d2d4 c5d4 f3d4 g8f6 b1c3']:['a7a6'],
+[D+' g8f6']:['c2c4'],[D+' g8f6 c2c4']:['e7e6','g7g6'],[D+' g8f6 c2c4 e7e6']:['b1c3','g2g3'],[D+' g8f6 c2c4 g7g6']:['b1c3'],
+[D+' d7d5']:['c2c4'],[D+' d7d5 c2c4']:['e7e6','c7c6'],[D+' d7d5 c2c4 e7e6']:['b1c3','g1f3'],
+['g1f3 d7d5']:[D,'g2g3'],['g1f3 g8f6']:['c2c4',D],['c2c4 e7e5']:['b1c3'],['c2c4 e7e5 b1c3']:['g8f6'],['c2c4 g8f6']:['b1c3','g1f3']};
+const ON=[['e2e4 e7e5 g1f3 b8c6 f1b5','Ruy Lopez'],['e2e4 e7e5 g1f3 b8c6 f1c4','Italian Game'],['e2e4 c7c5','Sicilian Defence'],['e2e4 e7e6','French Defence'],['e2e4 c7c6','Caro-Kann Defence'],
+['d2d4 d7d5 c2c4','Queen\'s Gambit'],['d2d4 g8f6 c2c4 e7e6','Nimzo/Queen\'s Indian setup'],['d2d4 g8f6 c2c4 g7g6','King\'s Indian setup'],['e2e4 e7e5','Open Game'],['d2d4 d7d5','Queen\'s Pawn Game'],
+['g1f3','Réti / Zukertort'],['c2c4','English Opening'],['e2e4','King\'s Pawn Game'],['d2d4','Queen\'s Pawn Game']];
+const opening=u=>{const k=u.join(' ');for(const[p,n]of ON)if(k==p||k.startsWith(p+' '))return n;return'Irregular opening'};
+const LV=[{d:1,nz:70},{d:2,nz:10},{d:3,nz:0}],LN=['Easy','Medium','Hard'];
+/* Game */
+let G=null,sel=null,flip=false,busy=false,targets=[];
+function newGame(){const pn=$('pname').value.trim();if(!pn){$('status').textContent='Please enter your name first';$('pname').focus();return}
+ try{localStorage.setItem('auro_chess_name',pn)}catch(e){}
+ let c=$('col').value;if(c=='r')c=Math.random()<.5?'w':'b';const s=init(),[tm,inc]=$('tc').value.split(',').map(Number);
+ busy=false;G={s,states:[s],san:[],uci:[],human:c,lvl:+$('lvl').value,over:null,last:null,name:pn,tc:tm>0,clk:{w:tm*1000,b:tm*1000},inc,tick:Date.now(),tcl:tm>0?$('tc').selectedOptions[0].text:'No clock'};
+ flip=c=='b';sel=null;render();aiTurn()}
+function play(m){if(G.over||!spend())return;const s=G.s,ms=legal(s),mm=ms.find(x=>x.f==m.f&&x.t==m.t&&x.p==m.p);G.san.push(san(s,mm,ms));G.uci.push(uci(mm));
+ G.s=make(s,mm);G.states.push(G.s);G.last=mm;sel=null;endCheck();render();if(!G.over)aiTurn()}
+function endCheck(){const s=G.s,ms=legal(s);let r=null,why='';
+ if(!ms.length){if(inChk(s)){r=s.t=='w'?'0-1':'1-0';why='Checkmate'}else{r='1/2-1/2';why='Stalemate'}}
+ else if(s.hm>=100){r='1/2-1/2';why='Fifty-move rule'}
+ else{const key=x=>x.b.join()+x.t+x.c+x.ep;if(G.states.filter(x=>key(x)==key(s)).length>=3){r='1/2-1/2';why='Threefold repetition'}
+  else{const pc=s.b.filter(x=>x&&x[1]!='K');if(!pc.length||(pc.length==1&&'NB'.includes(pc[0][1]))){r='1/2-1/2';why='Insufficient material'}}}
+ if(r){G.over={r,why};save()}}
+function aiTurn(){if(G.over||G.s.t==G.human)return;busy=true;render();
+ const g=G;setTimeout(()=>{if(G!==g)return;const ms=legal(G.s),bk=BK[G.uci.join(' ')],cand=bk&&ms.filter(m=>bk.includes(uci(m)));
+  const L=LV[G.lvl];const m=cand&&cand.length?cand[Math.random()*cand.length|0]:best(G.s,L.d,L.nz);busy=false;play(m)},80)}
+function click(i){if(!G||busy||G.over||G.s.t!=G.human)return;const p=G.s.b[i];
+ if(sel!=null){const m=legal(G.s).find(x=>x.f==sel&&x.t==i&&(!x.p||x.p=='Q'));if(m){play(m);return}}
+ sel=p&&p[0]==G.human?i:null;render()}
+function render(){const B=$('board');B.innerHTML='';if(!G){for(let d=0;d<64;d++){const e=document.createElement('div');e.className='sq '+(((d>>3)+(d&7))%2?'d':'l');B.appendChild(e)}drawBars();return}
+ const ms=legal(G.s);targets=sel!=null?ms.filter(m=>m.f==sel).map(m=>m.t):[];const ks=inChk(G.s)?G.s.b.indexOf(G.s.t+'K'):-1;
+ for(let d=0;d<64;d++){const i=flip?63-d:d,p=G.s.b[i],e=document.createElement('div');
+  let c='sq '+(((i>>3)+(i&7))%2?'d':'l');if(G.last&&(i==G.last.f||i==G.last.t))c+=' last';if(i==sel)c+=' sel';if(i==ks)c+=' chk';
+  if(targets.includes(i))c+=p?' tc':' t';e.className=c;if(p)e.innerHTML='<span class="'+p[0]+'">'+GL[p[1]]+'\uFE0E</span>';e.onclick=()=>click(i);B.appendChild(e)}
+ let t;if(G.over)t=({'1-0':'White wins','0-1':'Black wins','1/2-1/2':'Draw'})[G.over.r]+' — '+G.over.why;
+ else t=busy?'Auro is thinking…':(G.s.t==G.human?(inChk(G.s)?'Check! Your move':'Your move'):'Waiting…');
+ $('status').textContent=t;let h='';for(let i=0;i<G.san.length;i+=2)h+='<b>'+(i/2+1)+'.</b> '+G.san[i]+' '+(G.san[i+1]||'')+'  ';$('moves').innerHTML=h||'—';$('moves').scrollTop=1e5;drawBars()}
+$('bNew').onclick=newGame;$('bFlip').onclick=()=>{flip=!flip;render()};
+$('bUndo').onclick=()=>{if(!G||busy||G.over)return;const n=G.s.t==G.human?2:1;if(G.san.length<n)return;for(let k=0;k<n;k++){G.san.pop();G.uci.pop();G.states.pop()}G.s=G.states[G.states.length-1];G.last=null;if(G.tc)G.tick=Date.now();sel=null;render()};
+$('bRes').onclick=()=>{if(!G||G.over||!G.san.length)return;G.over={r:G.human=='w'?'0-1':'1-0',why:'Resignation'};save();render();show('Ana',G.id)};
+/* Clock */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+function spend(){if(!G.tc)return true;const now=Date.now(),c=G.s.t;G.clk[c]-=now-G.tick;if(G.clk[c]<=0){G.clk[c]=0;flag(c);return false}G.clk[c]+=G.inc*1000;G.tick=now;return true}
+function flag(c){if(G.over)return;G.over={r:c=='w'?'0-1':'1-0',why:'Time out'};save();render()}
+const fmt=ms=>{ms=Math.max(0,Math.ceil(ms/1000));return(ms/60|0)+':'+String(ms%60).padStart(2,'0')};
+function drawBars(){const hu=G?G.human:'w',bot=flip?'b':'w',top=flip?'w':'b';
+ const lab=c=>c==hu?'👤 '+esc(G?G.name:($('pname').value||'You')):'Auro AI'+(G?' <span class="mut">('+LN[G.lvl]+')</span>':'');
+ const cl=c=>{if(!G||!G.tc)return'<span class="clk">∞</span>';let ms=G.clk[c];const act=!G.over&&G.s.t==c;if(act)ms-=Date.now()-G.tick;return'<span class="clk'+(act?' act':'')+(ms<10000?' low':'')+'">'+fmt(ms)+'</span>'};
+ $('bTop').innerHTML='<span>'+lab(top)+'</span>'+cl(top);$('bBot').innerHTML='<span>'+lab(bot)+'</span>'+cl(bot)}
+setInterval(()=>{if(!G||G.over)return;if(G.tc){const c=G.s.t;if(G.clk[c]-(Date.now()-G.tick)<=0){G.clk[c]=0;flag(c);return}}drawBars()},250);
+try{$('pname').value=localStorage.getItem('auro_chess_name')||''}catch(e){}
+/* Storage */
+const KEY='auro_chess_games_v1';
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return MEM}}let MEM=[];
+function store(a){MEM=a;try{localStorage.setItem(KEY,JSON.stringify(a))}catch(e){}}
+function save(){G.id=Date.now();const a=load();a.push({id:G.id,date:new Date().toLocaleString(),name:G.name,tcl:G.tcl,human:G.human,lvl:G.lvl,r:G.over.r,why:G.over.why,san:G.san,uci:G.uci});store(a);setTimeout(()=>show('Ana',G.id),700)}
+const res=g=>g.r=='1/2-1/2'?'D':((g.r=='1-0')==(g.human=='w')?'W':'L'),resT={W:'Win',L:'Loss',D:'Draw'};
+/* Tabs */
+function show(t,id){for(const x of['Play','Hist','Ana']){$('p'+x).classList.toggle('hide',x!=t);$('t'+x).classList.toggle('on',x==t)}
+ if(t=='Hist')hist();if(t=='Ana')ana(id)}
+$('tPlay').onclick=()=>show('Play');$('tHist').onclick=()=>show('Hist');$('tAna').onclick=()=>show('Ana');
+function hist(){const a=load().slice().reverse(),P=$('pHist');
+ let w=a.filter(g=>res(g)=='W').length,l=a.filter(g=>res(g)=='L').length,d=a.length-w-l;
+ P.innerHTML='<div class="card"><h3 style="margin:0 0 8px;color:var(--gold)">Game history</h3><div class="grid"><div><div class="big">'+a.length+'</div><span class="mut">Games</span></div><div><div class="big">'+w+'</div><span class="mut">Wins</span></div><div><div class="big">'+d+'</div><span class="mut">Draws</span></div><div><div class="big">'+l+'</div><span class="mut">Losses</span></div></div></div>'+
+ (a.length?'<div class="card overflow" style="margin-top:12px"><table><tr><th>Player</th><th>Level</th><th>Opening</th><th>Moves</th><th>Result</th><th></th></tr>'+a.map(g=>'<tr><td>'+esc(g.name||'You')+'<br><span class="mut">'+g.date+'</span></td><td>'+LN[g.lvl]+'</td><td>'+opening(g.uci)+'</td><td>'+Math.ceil(g.san.length/2)+'</td><td class="'+res(g)+'">'+resT[res(g)]+' · '+g.why+'</td><td><button data-a="'+g.id+'">Report</button> <button data-x="'+g.id+'">✕</button></td></tr>').join('')+'</table></div><p><button id="clr">Clear all history</button></p>':'<p class="mut">No games yet. Finish a game to see it here.</p>');
+ P.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>show('Ana',+b.dataset.a));
+ P.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{store(load().filter(g=>g.id!=b.dataset.x));hist()});
+ const c=$('clr');if(c)c.onclick=()=>{store([]);hist()}}
+/* Analysis */
+const CACHE={};
+function replay(g){let s=init();const st=[s];for(const u of g.uci){s=make(s,legal(s).find(x=>uci(x)==u));st.push(s)}return st}
+function ana(id){const P=$('pAna'),a=load();const g=a.find(x=>x.id==id)||a[a.length-1];
+ if(!g){P.innerHTML='<p class="mut">No finished games yet. Play a game to get an analysis report.</p>';return}
+ if(CACHE[g.id]){P.innerHTML=rep(g,CACHE[g.id]);wire(g);return}
+ P.innerHTML='<div class="card"><div id="prog">Analysing game…</div></div>';
+ const st=replay(g),e=[];let i=0;
+ (function step(){const t0=Date.now();while(i<st.length&&Date.now()-t0<80){const v=srch(st[i],2,-1e5,1e5,0)*(st[i].t=='w'?1:-1);e.push(Math.max(-1000,Math.min(1000,v)));i++}
+  const pr=$('prog');if(pr)pr.textContent='Analysing game… '+Math.round(i/st.length*100)+'%';
+  if(i<st.length)setTimeout(step,0);else{CACHE[g.id]=build(g,st,e);P.innerHTML=rep(g,CACHE[g.id]);wire(g)}})()}
+function build(g,st,e){const rows=[],C={w:{Book:0,Best:0,Good:0,Inaccuracy:0,Mistake:0,Blunder:0},b:{Book:0,Best:0,Good:0,Inaccuracy:0,Mistake:0,Blunder:0}},L={w:[],b:[]};
+ g.uci.forEach((u,i)=>{const w=i%2==0;let loss=Math.max(0,w?e[i]-e[i+1]:e[i+1]-e[i]);let c=i<6?'Book':loss<=15?'Best':loss<=50?'Good':loss<=120?'Inaccuracy':loss<=250?'Mistake':'Blunder';
+  if(i<6)loss=0;rows.push({i,san:g.san[i],loss,c,w});C[w?'w':'b'][c]++;L[w?'w':'b'].push(loss)});
+ const acc=k=>L[k].length?Math.round(100*Math.exp(-(L[k].reduce((a,b)=>a+b,0)/L[k].length)/200)):0;
+ const mo=rows.filter(r=>r.loss>=120).sort((a,b)=>b.loss-a.loss).slice(0,3).map(r=>{const s=st[r.i],bm=best(s,2,0);return{...r,alt:bm?san(s,bm,legal(s)):'—'}});
+ const mat=st[st.length-1].b.reduce((a,p)=>p?a+(p[0]=='w'?1:-1)*V[p[1]]:a,0);
+ return{rows,C,acc:{w:acc('w'),b:acc('b')},mo,e,mat,op:opening(g.uci)}}
+function rep(g,R){const me=g.human,op=me=='w'?'b':'w',n=Math.ceil(g.san.length/2),r=res(g);
+ const W=600,H=140,pts=R.e.map((v,i)=>(i/(Math.max(1,R.e.length-1))*W).toFixed(1)+','+(H/2-Math.max(-600,Math.min(600,v))/600*(H/2-6)).toFixed(1)).join(' ');
+ const myA=R.acc[me],opA=R.acc[op],cl=R.C[me];
+ let sum='You '+(r=='W'?'won':r=='L'?'lost':'drew')+' this '+n+'-move game ('+g.why.toLowerCase()+') against the '+LN[g.lvl]+' engine in a '+R.op+'. ';
+ sum+=myA>=opA?'Your accuracy ('+myA+'%) was ahead of Auro\'s ('+opA+'%). ':'Auro was more accurate ('+opA+'% vs your '+myA+'%). ';
+ if(R.mo.length){const t=R.mo.find(x=>x.w==(me=='w'));sum+=t?'Your costliest moment was move '+(Math.floor(t.i/2)+1)+(t.w?'':'…')+' ('+t.san+', about '+(t.loss/100).toFixed(1)+' pawns lost).':'Auro\'s main slip came with '+R.mo[0].san+'.'}else sum+='No major swings — a clean game from both sides.';
+ const tip=cl.Blunder>1?'Focus: before each move, check what the opponent\'s last move attacks, and look for hanging pieces.':cl.Mistake+cl.Inaccuracy>3?'Focus: slow down in the middlegame and compare two candidate moves before committing.':'Focus: keep sharpening endgame technique and converting small advantages.';
+ const catCol={Book:'#8b949e',Best:'#3fb950',Good:'#7ee787',Inaccuracy:'#d4a84b',Mistake:'#f0883e',Blunder:'#f85149'};
+ return '<div class="card"><h3 style="margin:0 0 4px;color:var(--gold)">Analysis report</h3><div class="mut">'+g.date+' · '+LN[g.lvl]+(g.tcl?' · '+g.tcl:'')+' · '+esc(g.name||'You')+' played '+(me=='w'?'White':'Black')+' · <span class="'+r+'">'+resT[r]+'</span></div><p>'+sum+'</p></div>'+
+ '<div class="grid" style="margin:12px 0"><div class="card"><div class="big">'+myA+'%</div><span class="mut">Your accuracy</span></div><div class="card"><div class="big">'+opA+'%</div><span class="mut">Auro accuracy</span></div><div class="card"><div class="big">'+n+'</div><span class="mut">Moves</span></div><div class="card"><div class="big">'+(R.mat>0?'+':'')+(R.mat/100)+'</div><span class="mut">Final material (White)</span></div></div>'+
+ '<div class="card overflow"><div class="mut">Evaluation (up = White better)</div><svg viewBox="0 0 '+W+' '+H+'" width="100%"><line x1="0" x2="'+W+'" y1="'+H/2+'" y2="'+H/2+'" stroke="#2a313c"/><polyline points="'+pts+'" fill="none" stroke="#d4a84b" stroke-width="2"/></svg></div>'+
+ '<div class="card overflow" style="margin-top:12px"><table><tr><th>Move quality</th><th>You</th><th>Auro</th></tr>'+Object.keys(cl).map(k=>'<tr><td style="color:'+catCol[k]+'">● '+k+'</td><td>'+R.C[me][k]+'</td><td>'+R.C[op][k]+'</td></tr>').join('')+'</table></div>'+
+ '<div class="card" style="margin-top:12px"><b>Key moments</b>'+(R.mo.length?R.mo.map(m=>'<p style="margin:8px 0">Move '+(Math.floor(m.i/2)+1)+(m.w?'':'…')+' by '+(m.w==(me=='w')?'you':'Auro')+': <b>'+m.san+'</b> ('+m.c+', −'+(m.loss/100).toFixed(1)+'). Stronger was <b>'+m.alt+'</b>.</p>').join(''):'<p class="mut">No major turning points.</p>')+'<p class="mut">'+tip+'</p></div>'+
+ '<div class="card" style="margin-top:12px"><b>Moves</b><p style="font-family:ui-monospace,monospace;font-size:13px">'+R.rows.map(x=>(x.w?(x.i/2+1)+'. ':'')+'<span style="color:'+catCol[x.c]+'">'+x.san+'</span>').join(' ')+'</p><div class="row"><button id="pgn">Copy PGN</button></div></div>'}
+function wire(g){const b=$('pgn');if(b)b.onclick=()=>{let t='[Event "Auro AI Chess Master"]\n[White "'+(g.human=='w'?(g.name||'Player'):'Auro AI')+'"]\n[Black "'+(g.human=='b'?(g.name||'Player'):'Auro AI')+'"]\n[Result "'+g.r+'"]\n\n';g.san.forEach((s,i)=>{t+=(i%2?'':(i/2+1)+'. ')+s+' '});t+=g.r;try{navigator.clipboard.writeText(t);b.textContent='Copied ✓'}catch(e){b.textContent='Copy unavailable'}}}
+render();
+</script></body></html>

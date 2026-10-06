@@ -35,7 +35,7 @@ main{max-width:980px;margin:0 auto;padding:16px}.wrap{display:flex;gap:18px;flex
 <div class="side">
 <div class="card"><div id="status">Enter your name, then press New game</div></div>
 <div class="card row"><input id="pname" placeholder="Enter your name" maxlength="20" style="flex:1 1 100%;font-size:16px"><select id="tc"><option value="0,0">No clock</option><option value="180,2">3 min + 2s</option><option value="300,3">5 min + 3s</option><option value="600,0" selected>10 min</option><option value="900,10">15 min + 10s</option></select><select id="col"><option value="w">Play White</option><option value="b">Play Black</option><option value="r">Random</option></select>
-<select id="lvl"><option value="0">Easy</option><option value="1">Medium</option><option value="2" selected>Hard</option></select>
+<select id="lvl"><option value="0">Easy</option><option value="1">Medium</option><option value="2">Hard</option><option value="3" selected>Grandmaster</option></select>
 <button class="pri" id="bNew">New game</button></div>
 <div class="card row"><button id="bUndo">Undo</button><button id="bFlip">Flip</button><button id="bRes">Resign</button></div>
 <div class="card"><div class="mut" style="margin-bottom:6px">Moves</div><div id="moves"></div></div>
@@ -78,19 +78,51 @@ function make(s,m){const b=s.b.slice(),p=b[m.f],t=s.t;let c=s.c,ep=-1;const cap=
  return{b,t:t=='w'?'b':'w',c,ep,hm:(p[1]=='P'||cap||m.e)?0:s.hm+1}}
 const inChk=s=>att(s.b,s.b.indexOf(s.t+'K'),s.t=='w'?'b':'w');
 const legal=s=>gen(s).filter(m=>{const n=make(s,m);return!att(n.b,n.b.indexOf(s.t+'K'),n.t)});
-function ev(s){let v=0;for(let i=0;i<64;i++){const p=s.b[i];if(!p)continue;const w=p[0]=='w',ty=p[1],r=w?i>>3:7-(i>>3),c=i&7;
- const cen=7-Math.abs(c-3.5)-Math.abs((i>>3)-3.5);let x=V[ty];
- if(ty=='P')x+=(6-r)*8+((c==3||c==4)?(6-r)*5:0);else if(ty=='N')x+=cen*7;else if(ty=='B')x+=cen*4+(r==7?-10:0);
- else if(ty=='R')x+=r==1?14:0;else if(ty=='Q')x+=cen;else x+=(r==7?8:-25)+(r==7&&(c<3||c>5)?18:0);
- v+=w?x:-x}return v}
+function ev(s){const b=s.b,F=[[],[]];for(let c=0;c<8;c++){F[0].push([]);F[1].push([])}let nmat=0;
+ for(let i=0;i<64;i++){const p=b[i];if(!p)continue;if(p[1]=='P')F[p[0]=='w'?0:1][i&7].push(i>>3);else if(p[1]!='K')nmat+=V[p[1]]}
+ const eg=nmat<2600;let v=s.t=='w'?10:-10,bw=0,bb=0;
+ for(let i=0;i<64;i++){const p=b[i];if(!p)continue;const w=p[0]=='w',ty=p[1],R0=i>>3,r=w?R0:7-R0,c=i&7,my=F[w?0:1],op=F[w?1:0];
+  const cen=7-Math.abs(c-3.5)-Math.abs(R0-3.5);let x=V[ty];
+  if(ty=='P'){const a=6-r;x+=a*8+((c==3||c==4)?a*5:0);
+   if(my[c].length>1)x-=10;if(!(c>0&&my[c-1].length)&&!(c<7&&my[c+1].length))x-=12;
+   let ps=1;for(let k=Math.max(0,c-1);k<=Math.min(7,c+1);k++)for(const rr of op[k])if(w?rr<R0:rr>R0)ps=0;
+   if(ps)x+=a*a*5+a*6}
+  else if(ty=='N')x+=cen*7;else if(ty=='B'){x+=cen*4+(r==7?-10:0);if(w)bw++;else bb++}
+  else if(ty=='R'){x+=r==1?14:0;if(!my[c].length)x+=op[c].length?8:16}
+  else if(ty=='Q')x+=cen;
+  else{if(eg)x+=cen*9;else{x+=(r==7?8:-25)+(r==7&&(c<3||c>5)?18:0);let sh=0;for(let k=Math.max(0,c-1);k<=Math.min(7,c+1);k++)for(const rr of my[k])if((w?rr:7-rr)>=5)sh++;x+=sh*9}}
+  v+=w?x:-x}
+ return v+(bw>1?30:0)-(bb>1?30:0)}
 const order=(ms,s)=>{const sc=m=>(s.b[m.t]?10*V[s.b[m.t][1]]-V[s.b[m.f][1]]/10:0)+(m.e?900:0)+(m.p?(m.p=='Q'?800:0):0);return ms.map(m=>[sc(m),m]).sort((a,b)=>b[0]-a[0]).map(x=>x[1])};
-let DL=0,ABORT=0,NC=0;
-function srch(s,d,a,b,pl){if(DL&&(++NC&511)==0&&Date.now()>DL)ABORT=1;if(ABORT)return 0;if(s.hm>=100)return 0;const q=d<=0;let bs=-1e9,ms=gen(s);
- if(q){const st=(s.t=='w'?1:-1)*ev(s);if(d<-4||st>=b)return st;bs=st;if(st>a)a=st;ms=ms.filter(m=>s.b[m.t]||m.e||m.p)}
- ms=order(ms,s);let n=0;
- for(const m of ms){const c=make(s,m);if(att(c.b,c.b.indexOf(s.t+'K'),c.t))continue;n++;
-  const v=-srch(c,d-1,-b,-a,pl+1);if(v>bs)bs=v;if(v>a)a=v;if(a>=b)break}
- if(!n&&!q)return inChk(s)?-30000+pl:0;return bs}
+let DL=0,ABORT=0,NC=0,KL=[],TT=new Map(),HS=new Int32Array(4096);
+function srch(s,d,a,b,pl,nul){if(DL&&(++NC&255)==0&&Date.now()>DL)ABORT=1;if(ABORT)return 0;if(s.hm>=100)return 0;
+ const me=s.t,inC=inChk(s);if(inC&&d>0&&pl<40)d++;const q=d<=0,a0=a;let bs=-1e9,ms=gen(s),e=null,key;
+ if(q){const st=(me=='w'?1:-1)*ev(s);if(d<-4||st>=b)return st;bs=st;if(st>a)a=st;ms=ms.filter(m=>s.b[m.t]||m.e||m.p)}
+ else{key=s.b.join()+me+s.c+s.ep;e=TT.get(key);
+  if(e&&e.d>=d&&pl>0&&(e.f==0||(e.f==1&&e.v>=b)||(e.f==2&&e.v<=a)))return e.v;
+  if(nul&&!inC&&d>=3&&s.b.some(p=>p&&p[0]==me&&p[1]!='P'&&p[1]!='K')){const v=-srch({b:s.b,t:me=='w'?'b':'w',c:s.c,ep:-1,hm:s.hm+1},d-3,-b,-b+1,pl+1,0);if(ABORT)return 0;if(v>=b)return b}}
+ const hm=e&&e.m,kl=KL[pl]||[];
+ const sc=m=>{if(hm&&m.f==hm.f&&m.t==hm.t&&m.p==hm.p)return 1e7;const g=s.b[m.t];if(g||m.e)return 1e5+10*V[g?g[1]:'P']-V[s.b[m.f][1]]/10;if(m.p)return 9e4;const k=m.f*64+m.t;return k==kl[0]?5e4:k==kl[1]?4e4:HS[k]};
+ ms=ms.map(m=>[sc(m),m]).sort((x,y)=>y[0]-x[0]).map(x=>x[1]);
+ let n=0,bm=null;
+ for(const m of ms){const c=make(s,m);if(att(c.b,c.b.indexOf(me+'K'),c.t))continue;n++;
+  const cap=s.b[m.t]||m.e||m.p;let v;
+  if(q||n==1)v=-srch(c,d-1,-b,-a,pl+1,1);
+  else{const r=(d>=3&&n>4&&!cap&&!inC)?(n>10?2:1):0;
+   v=-srch(c,d-1-r,-a-1,-a,pl+1,1);if(v>a&&r)v=-srch(c,d-1,-a-1,-a,pl+1,1);if(v>a&&v<b)v=-srch(c,d-1,-b,-a,pl+1,1)}
+  if(ABORT)return 0;
+  if(v>bs){bs=v;bm=m}if(v>a)a=v;
+  if(a>=b){if(!cap){const k=m.f*64+m.t;if(KL[pl]){if(KL[pl][0]!=k){KL[pl][1]=KL[pl][0];KL[pl][0]=k}}else KL[pl]=[k];HS[k]+=d*d}break}}
+ if(!n&&!q)return inC?-30000+pl:0;
+ if(!q){if(TT.size>3e5)TT.clear();TT.set(key,{d,v:bs,f:bs>=b?1:bs<=a0?2:0,m:bm?{f:bm.f,t:bm.t,p:bm.p}:null})}
+ return bs}
+function bestPro(s,L){KL=[];HS.fill(0);NC=0;ABORT=0;DL=0;const ms=order(legal(s),s);let bm=ms[0];const t0=Date.now();
+ for(let dd=1;dd<=L.d;dd++){if(dd>2)DL=t0+L.t;let a=-1e9,cur=null;
+  for(const m of ms){const c=make(s,m);let v;
+   if(!cur)v=-srch(c,dd-1,-1e9,1e9,1,1);else{v=-srch(c,dd-1,-a-1,-a,1,1);if(v>a)v=-srch(c,dd-1,-1e9,-a,1,1)}
+   if(ABORT)break;if(v>a||!cur){a=v;cur=m}}
+  if(ABORT)break;bm=cur;ms.splice(ms.indexOf(cur),1);ms.unshift(cur);if(Math.abs(a)>20000||Date.now()-t0>L.t*.6)break}
+ DL=0;ABORT=0;return bm}
 function best(s,d,nz){let bm=null;const ms0=order(legal(s),s);
  for(let dd=1;dd<=d;dd++){DL=(nz||dd==1)?0:Date.now()+2500;ABORT=0;let cur=null,ba=-1e9;
   for(const m of ms0){const lo=nz?-1e9:ba;const v=-srch(make(s,m),dd-1,-1e9,-lo,1)+nz*(Math.random()-.5)*2;if(ABORT)break;if(v>ba||!cur){ba=v;cur=m}}
@@ -118,7 +150,7 @@ const ON=[['e2e4 e7e5 g1f3 b8c6 f1b5','Ruy Lopez'],['e2e4 e7e5 g1f3 b8c6 f1c4','
 ['d2d4 d7d5 c2c4','Queen\'s Gambit'],['d2d4 g8f6 c2c4 e7e6','Nimzo/Queen\'s Indian setup'],['d2d4 g8f6 c2c4 g7g6','King\'s Indian setup'],['e2e4 e7e5','Open Game'],['d2d4 d7d5','Queen\'s Pawn Game'],
 ['g1f3','Réti / Zukertort'],['c2c4','English Opening'],['e2e4','King\'s Pawn Game'],['d2d4','Queen\'s Pawn Game']];
 const opening=u=>{const k=u.join(' ');for(const[p,n]of ON)if(k==p||k.startsWith(p+' '))return n;return'Irregular opening'};
-const LV=[{d:1,nz:70},{d:2,nz:10},{d:3,nz:0}],LN=['Easy','Medium','Hard'];
+const LV=[{d:1,nz:70},{d:2,nz:10},{pro:1,d:8,t:2500},{pro:1,d:14,t:6500}],LN=['Easy','Medium','Hard','Grandmaster'];
 /* Game */
 let G=null,sel=null,flip=false,busy=false,targets=[];
 function newGame(){const pn=$('pname').value.trim();if(!pn){$('status').textContent='Please enter your name first';$('pname').focus();return}
@@ -136,7 +168,7 @@ function endCheck(){const s=G.s,ms=legal(s);let r=null,why='';
  if(r){G.over={r,why};save()}}
 function aiTurn(){if(G.over||G.s.t==G.human)return;busy=true;render();
  const g=G;setTimeout(()=>{if(G!==g)return;const ms=legal(G.s),bk=BK[G.uci.join(' ')],cand=bk&&ms.filter(m=>bk.includes(uci(m)));
-  const L=LV[G.lvl];const m=cand&&cand.length?cand[Math.random()*cand.length|0]:best(G.s,L.d,L.nz);busy=false;play(m)},80)}
+  const L=LV[G.lvl];const m=cand&&cand.length?cand[Math.random()*cand.length|0]:L.pro?bestPro(G.s,L):best(G.s,L.d,L.nz);busy=false;play(m)},80)}
 function click(i){if(!G||busy||G.over||G.s.t!=G.human)return;const p=G.s.b[i];
  if(sel!=null){const m=legal(G.s).find(x=>x.f==sel&&x.t==i&&(!x.p||x.p=='Q'));if(m){play(m);return}}
  sel=p&&p[0]==G.human?i:null;render()}
